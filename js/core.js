@@ -598,6 +598,7 @@ ARMCore.prototype.barrelShiftImmediate = function(shiftType, immediate, rm) {
 }
 
 ARMCore.prototype.compileArm = function(instruction) {
+
 	var op = this.badOp(instruction);
 	var i = instruction & 0x0E000000;
 	var cpu = this;
@@ -1060,6 +1061,8 @@ ARMCore.prototype.compileArm = function(instruction) {
 
 	op.execMode = this.MODE_ARM;
 	op.fixedJump = op.fixedJump || false;
+
+	
 	return op;
 };
 

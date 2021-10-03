@@ -87,49 +87,54 @@ function GameBoyAdvanceRTC(gpio) {
 };
 
 GameBoyAdvanceRTC.prototype.setPins = function(nybble) {
-	switch (this.transferStep) {
-	case 0:
-		if ((nybble & 5) == 1) {
-			this.transferStep = 1;
-		}
-		break;
-	case 1:
-		if (nybble & 4) {
-			this.transferStep = 2;
-		}
-		break;
-	case 2:
-		if (!(nybble & 1)) {
-			this.bits &= ~(1 << this.bitsRead);
-			this.bits |= ((nybble & 2) >> 1) << this.bitsRead;
-		} else {
+
+	const f = gpu.createKernel(function(nybble){
+		switch (this.transferStep) {
+		case 0:
+			if ((nybble & 5) == 1) {
+				this.transferStep = 1;
+			}
+			break;
+		case 1:
 			if (nybble & 4) {
-				// SIO direction should always != this.read
-				if ((this.direction & 2) && !this.read) {
-					++this.bitsRead;
-					if (this.bitsRead == 8) {
-						this.processByte();
+				this.transferStep = 2;
+			}
+			break;
+		case 2:
+			if (!(nybble & 1)) {
+				this.bits &= ~(1 << this.bitsRead);
+				this.bits |= ((nybble & 2) >> 1) << this.bitsRead;
+			} else {
+				if (nybble & 4) {
+					// SIO direction should always != this.read
+					if ((this.direction & 2) && !this.read) {
+						++this.bitsRead;
+						if (this.bitsRead == 8) {
+							this.processByte();
+						}
+					} else {
+						this.gpio.outputPins(5 | (this.sioOutputPin() << 1));
+						++this.bitsRead;
+						if (this.bitsRead == 8) {
+							--this.bytesRemaining;
+							if (this.bytesRemaining <= 0) {
+								this.command = -1;
+							}
+							this.bitsRead = 0;
+						}
 					}
 				} else {
-					this.gpio.outputPins(5 | (this.sioOutputPin() << 1));
-					++this.bitsRead;
-					if (this.bitsRead == 8) {
-						--this.bytesRemaining;
-						if (this.bytesRemaining <= 0) {
-							this.command = -1;
-						}
-						this.bitsRead = 0;
-					}
+					this.bitsRead = 0;
+					this.bytesRemaining = 0;
+					this.command = -1;
+					this.transferStep = 0;
 				}
-			} else {
-				this.bitsRead = 0;
-				this.bytesRemaining = 0;
-				this.command = -1;
-				this.transferStep = 0;
 			}
+			break;
 		}
-		break;
-	}
+	}).setOutput([100, 100, 100]);
+	f(nybble);
+	
 
 	this.pins = nybble & 7;
 };

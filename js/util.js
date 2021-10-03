@@ -1,3 +1,13 @@
+
+
+
+const gpu = new GPU({
+    mode: 'gpu'
+});
+
+
+
+
 Object.prototype.inherit = function() {
 	for (var v in this) {
 		this[v] = this[v];
@@ -156,28 +166,36 @@ Serializer = {
 
 		var reader = new FileReader();
 		reader.onload = function(data) {
+			
 			var view = new Uint8Array(data.target.result);
 			var pointer = 0;
 			var pixelPointer = 0;
 			var newPixels = context.createImageData(canvas.width, canvas.height + padding);
-			for (var y = 0; y < canvas.height; ++y) {
-				for (var x = 0; x < canvas.width; ++x) {
-					var oldY = (y / multiplier) | 0;
-					var oldX = (x / multiplier) | 0;
-					if (oldY > base.height || !pixels.data[(oldX + oldY * base.width) * 4 + 3]) {
-						newPixels.data[pixelPointer++] = view[pointer++];
-						newPixels.data[pixelPointer++] = view[pointer++];
-						newPixels.data[pixelPointer++] = view[pointer++];
-						newPixels.data[pixelPointer++] = 0;
-					} else {
-						var byte = view[pointer++];
-						newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 0] | (byte & 7);
-						newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 1] | ((byte >> 3) & 7);
-						newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 2] | ((byte >> 6) & 7);
-						newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 3];
+
+
+			const read = gpu.createKernel(function(canvas,base,multiplier,view,pointer,pixelPointer,newPixels) {
+				for (var y = 0; y < canvas.height; ++y) {
+					for (var x = 0; x < canvas.width; ++x) {
+						var oldY = (y / multiplier) | 0;
+						var oldX = (x / multiplier) | 0;
+						if (oldY > base.height || !pixels.data[(oldX + oldY * base.width) * 4 + 3]) {
+							newPixels.data[pixelPointer++] = view[pointer++];
+							newPixels.data[pixelPointer++] = view[pointer++];
+							newPixels.data[pixelPointer++] = view[pointer++];
+							newPixels.data[pixelPointer++] = 0;
+						} else {
+							var byte = view[pointer++];
+							newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 0] | (byte & 7);
+							newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 1] | ((byte >> 3) & 7);
+							newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 2] | ((byte >> 6) & 7);
+							newPixels.data[pixelPointer++] = pixels.data[(oldX + oldY * base.width) * 4 + 3];
+						}
 					}
 				}
-			}
+			}).setGraphical(true).setOutput([100, 100, 100]);
+			read(canvas,base,multiplier,view,pointer,pixelPointer,newPixels);
+			
+
 			context.putImageData(newPixels, 0, 0);
 			callback(canvas.toDataURL('image/png'));
 		}
@@ -197,21 +215,30 @@ Serializer = {
 			context.drawImage(image, 0, 0);
 			var pixels = context.getImageData(0, 0, canvas.width, canvas.height);
 			var data = [];
-			for (var y = 0; y < canvas.height; ++y) {
-				for (var x = 0; x < canvas.width; ++x) {
-					if (!pixels.data[(x + y * canvas.width) * 4 + 3]) {
-						data.push(pixels.data[(x + y * canvas.width) * 4 + 0]);
-						data.push(pixels.data[(x + y * canvas.width) * 4 + 1]);
-						data.push(pixels.data[(x + y * canvas.width) * 4 + 2]);
-					} else {
-						var byte = 0;
-						byte |= pixels.data[(x + y * canvas.width) * 4 + 0] & 7;
-						byte |= (pixels.data[(x + y * canvas.width) * 4 + 1] & 7) << 3;
-						byte |= (pixels.data[(x + y * canvas.width) * 4 + 2] & 7) << 6;
-						data.push(byte);
+
+			const read = gpu.createKernel(function(canvas,data,pixels) {
+
+				for (var y = 0; y < canvas.height; ++y) {
+					for (var x = 0; x < canvas.width; ++x) {
+						if (!pixels.data[(x + y * canvas.width) * 4 + 3]) {
+							data.push(pixels.data[(x + y * canvas.width) * 4 + 0]);
+							data.push(pixels.data[(x + y * canvas.width) * 4 + 1]);
+							data.push(pixels.data[(x + y * canvas.width) * 4 + 2]);
+						} else {
+							var byte = 0;
+							byte |= pixels.data[(x + y * canvas.width) * 4 + 0] & 7;
+							byte |= (pixels.data[(x + y * canvas.width) * 4 + 1] & 7) << 3;
+							byte |= (pixels.data[(x + y * canvas.width) * 4 + 2] & 7) << 6;
+							data.push(byte);
+						}
 					}
 				}
-			}
+
+			}).setGraphical(true).setOutput([100, 100, 100]);
+			read(canvas,data,pixels);
+			
+
+
 			newBlob = new Blob(data.map(function (byte) {
 				var array = new Uint8Array(1);
 				array[0] = byte;

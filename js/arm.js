@@ -1549,21 +1549,26 @@ ARMCoreArm.prototype.constructUMULL = function(rd, rn, rs, rm, condOp) {
 };
 
 ARMCoreArm.prototype.constructUMULLS = function(rd, rn, rs, rm, condOp) {
-	var cpu = this.cpu;
-	var SHIFT_32 = 1/0x100000000;
-	var gprs = cpu.gprs;
-	return function() {
-		cpu.mmu.waitPrefetch32(gprs[cpu.PC]);
-		if (condOp && !condOp()) {
-			return;
-		}
-		++cpu.cycles;
-		cpu.mmu.waitMul(gprs[rs]);
-		var hi = ((gprs[rm] & 0xFFFF0000) >>> 0) * (gprs[rs] >>> 0);
-		var lo = ((gprs[rm] & 0x0000FFFF) >>> 0) * (gprs[rs] >>> 0);
-		gprs[rn] = ((hi & 0xFFFFFFFF) + (lo & 0xFFFFFFFF)) & 0xFFFFFFFF;
-		gprs[rd] = (hi * SHIFT_32 + lo * SHIFT_32) >>> 0;
-		cpu.cpsrN = gprs[rd] >> 31;
-		cpu.cpsrZ = !((gprs[rd] & 0xFFFFFFFF) || (gprs[rn] & 0xFFFFFFFF));
-	};
+
+	const f = gpu.createKernel(function(rd,rn,rs,rm,condOp){
+		var cpu = this.cpu;
+		var SHIFT_32 = 1/0x100000000;
+		var gprs = cpu.gprs;
+		return function() {
+			cpu.mmu.waitPrefetch32(gprs[cpu.PC]);
+			if (condOp && !condOp()) {
+				return;
+			}
+			++cpu.cycles;
+			cpu.mmu.waitMul(gprs[rs]);
+			var hi = ((gprs[rm] & 0xFFFF0000) >>> 0) * (gprs[rs] >>> 0);
+			var lo = ((gprs[rm] & 0x0000FFFF) >>> 0) * (gprs[rs] >>> 0);
+			gprs[rn] = ((hi & 0xFFFFFFFF) + (lo & 0xFFFFFFFF)) & 0xFFFFFFFF;
+			gprs[rd] = (hi * SHIFT_32 + lo * SHIFT_32) >>> 0;
+			cpu.cpsrN = gprs[rd] >> 31;
+			cpu.cpsrZ = !((gprs[rd] & 0xFFFFFFFF) || (gprs[rn] & 0xFFFFFFFF));
+		};
+	}).setOutput([100, 100, 100]);
+	f(rd,rn,rs,rm,condOp);
+
 };

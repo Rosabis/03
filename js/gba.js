@@ -255,49 +255,66 @@ GameBoyAdvance.prototype.decodeSavedata = function(string) {
 };
 
 GameBoyAdvance.prototype.decodeBase64 = function(string) {
-	var length = (string.length * 3 / 4);
-	if (string[string.length - 2] == '=') {
-		length -= 2;
-	} else if (string[string.length - 1] == '=') {
-		length -= 1;
-	}
-	var buffer = new ArrayBuffer(length);
-	var view = new Uint8Array(buffer);
-	var bits = string.match(/..../g);
-	for (var i = 0; i + 2 < length; i += 3) {
-		var s = atob(bits.shift());
-		view[i] = s.charCodeAt(0);
-		view[i + 1] = s.charCodeAt(1);
-		view[i + 2] = s.charCodeAt(2);
-	}
-	if (i < length) {
-		var s = atob(bits.shift());
-		view[i++] = s.charCodeAt(0);
-		if (s.length > 1) {
-			view[i++] = s.charCodeAt(1);
-		}
-	}
 
-	return buffer;
+	var r;
+	const f = gpu.createKernel(function(string,r) {
+		var length = (string.length * 3 / 4);
+		if (string[string.length - 2] == '=') {
+			length -= 2;
+		} else if (string[string.length - 1] == '=') {
+			length -= 1;
+		}
+		var buffer = new ArrayBuffer(length);
+		var view = new Uint8Array(buffer);
+		var bits = string.match(/..../g);
+		for (var i = 0; i + 2 < length; i += 3) {
+			var s = atob(bits.shift());
+			view[i] = s.charCodeAt(0);
+			view[i + 1] = s.charCodeAt(1);
+			view[i + 2] = s.charCodeAt(2);
+		}
+		if (i < length) {
+			var s = atob(bits.shift());
+			view[i++] = s.charCodeAt(0);
+			if (s.length > 1) {
+				view[i++] = s.charCodeAt(1);
+			}
+		}
+
+		r = buffer;
+	}).setOutput([100, 100, 100]);
+	f(string,r);
+
+
+	return r;
 };
 
 GameBoyAdvance.prototype.encodeBase64 = function(view) {
-	var data = [];
-	var b;
-	var wordstring = [];
-	var triplet;
-	for (var i = 0; i < view.byteLength; ++i) {
-		b = view.getUint8(i, true);
-		wordstring.push(String.fromCharCode(b));
-		while (wordstring.length >= 3) {
-			triplet = wordstring.splice(0, 3);
-			data.push(btoa(triplet.join('')));
+
+	var r;
+	const f = gpu.createKernel(function(view,r){
+		var data = [];
+		var b;
+		var wordstring = [];
+		var triplet;
+		for (var i = 0; i < view.byteLength; ++i) {
+			b = view.getUint8(i, true);
+			wordstring.push(String.fromCharCode(b));
+			while (wordstring.length >= 3) {
+				triplet = wordstring.splice(0, 3);
+				data.push(btoa(triplet.join('')));
+			}
+		};
+		if (wordstring.length) {
+			data.push(btoa(wordstring.join('')));
 		}
-	};
-	if (wordstring.length) {
-		data.push(btoa(wordstring.join('')));
-	}
-	return data.join('');
+
+		r = data;
+	}).setOutput([100, 100, 100]);
+	f(view,r);
+
+
+	return r.join('');
 };
 
 GameBoyAdvance.prototype.downloadSavedata = function() {
