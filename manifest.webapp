@@ -1,0 +1,16 @@
+
+
+
+
+{
+  "name": "GBA Emulator",
+  "description": "GBA Emulator",
+  "launch_path": "/index.html",
+  "origin": "app://flown.gba_emulator",
+  "version": "1.0",
+  "icons": {
+    "128": "/icon.png"
+  }
+}
+
+
