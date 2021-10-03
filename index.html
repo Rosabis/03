@@ -116,8 +116,12 @@ function run(file) {
 			//fadeOut('preload', 'in_game');
 			fadeOut('instructions', null, true);
 			gba.runStable();
+			console.log("loaded");
 		}
-
+		else
+		{
+			console.log("load failed");
+		}
 	});
 }
 
@@ -276,6 +280,14 @@ document.addEventListener('webkitfullscreenchange', function() {
 
 
 //KaiOS
+/*
+if (document.body.offsetWidth != 0)
+	document.getElementById('screen').setAttribute("width",document.body.offsetWidth);
+if (document.body.offsetHeight != 0)
+	document.getElementById('screen').setAttribute("height",document.body.offsetHeight);
+*/
+
+
 //setPixelated(true);
 setVolume(1);
 document.addEventListener("keydown",function(e){
@@ -320,6 +332,8 @@ document.addEventListener("keydown",function(e){
 	     	break;
 	    case "*":
 	     	document.getElementById('loader').click()//加载游戏
+	     	console.log("load game");
+	     	//run("./game.gba");
 	     	break;
 	    case "#":
 	    	gba.downloadSavedata();//下载存档
