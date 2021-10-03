@@ -281,6 +281,7 @@ setVolume(1);
 document.addEventListener("keydown",function(e){
 	switch(e.key)
 	{
+		case "m":
 		case "Call":
 			alert("A对应键盘6\n \
 				B对应键盘5\n \
@@ -343,7 +344,7 @@ document.addEventListener("keydown",function(e){
 		<input id="saveloader" type="file" onChange="uploadSavedataPending(this.files[0]);">
 	</div>
 
-	<p>按Call键打开说明</p>
+	<p>按Call键或m键打开说明</p>
 
 	<!--
 	<div id="in_game" class="hidden">
